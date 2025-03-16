@@ -8,14 +8,12 @@ from langchain.chains import RetrievalQA
 from sentence_transformers import SentenceTransformer
 from langchain.llms import HuggingFaceHub
 from langchain.text_splitter import CharacterTextSplitter
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
 
 # Load Hugging Face API Token
 hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 if hf_token is None:
-    raise ValueError("HUGGINGFACEHUB_API_TOKEN is not set. Please set it in your environment variables.")
+    st.error("HUGGINGFACEHUB_API_TOKEN is not set. Please set it in your environment variables.")
+    st.stop()
 
 # Initialize Hugging Face LLM
 llm = HuggingFaceHub(repo_id="google/flan-t5-large", huggingfacehub_api_token=hf_token)
@@ -36,29 +34,23 @@ def create_faiss_index(documents):
     index.add(np.array(embeddings))
     return index, embeddings, embedder
 
-@app.route("/upload", methods=["POST"])
-def upload_file():
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-    file = request.files["file"]
-    file_path = "temp.pdf"
-    file.save(file_path)
-    documents = load_documents(file_path)
-    index, embeddings, embedder = create_faiss_index(documents)
-    return jsonify({"message": "Document processed and indexed!"})
+st.title("RAG Chatbot")
 
-@app.route("/query", methods=["POST"])
-def query_chatbot():
-    data = request.get_json()
-    query = data.get("query")
-    if not query:
-        return jsonify({"error": "No query provided"}), 400
+# File Upload
+uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
+if uploaded_file is not None:
+    with open("temp.pdf", "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    documents = load_documents("temp.pdf")
+    index, embeddings, embedder = create_faiss_index(documents)
+    st.success("Document processed and indexed!")
+
+# Query chatbot
+query = st.text_input("Ask a question about the document:")
+if query and uploaded_file is not None:
     query_embedding = embedder.encode(query)
     D, I = index.search(np.array([query_embedding]), k=5)
     retrieved_docs = [documents[i] for i in I[0]]
     qa_chain = RetrievalQA(llm=llm, retriever=retrieved_docs)
     response = qa_chain.run(query)
-    return jsonify({"answer": response})
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    st.write("### Answer:", response)
