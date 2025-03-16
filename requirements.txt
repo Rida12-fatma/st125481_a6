@@ -1,11 +1,13 @@
 
-FAISS
-HuggingFace_Hub
-Sentence-Transformer
-faiss-cpu
+flask
+faiss-cpu==1.7.4
 numpy
-os
-streamlit
 langchain
+sentence-transformers
 langchain-community
-pypdf
+langchain-core
+PyPDF2
+huggingface_hub
+streamlit
+requests
+
