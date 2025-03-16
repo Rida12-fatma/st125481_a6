@@ -1,7 +1,5 @@
 import os
-import faiss
 import numpy as np
-from langchain.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader
 from langchain.chains import RetrievalQA
@@ -25,13 +23,20 @@ llm = HuggingFaceHub(
     task="text2text-generation"
 )
 
+# Try to import FAISS
+try:
+    import faiss
+    from langchain.vectorstores import FAISS
+    FAISS_AVAILABLE = True
+except ImportError:
+    FAISS_AVAILABLE = False
+
 # Define FAISS index path
 INDEX_PATH = "faiss_index.bin"
 
 def load_faiss_index():
-    if os.path.exists(INDEX_PATH):
-        index = faiss.read_index(INDEX_PATH)
-        return index
+    if FAISS_AVAILABLE and os.path.exists(INDEX_PATH):
+        return faiss.read_index(INDEX_PATH)
     return None
 
 faiss_index = load_faiss_index()
@@ -43,6 +48,12 @@ def query():
     
     if not question:
         return jsonify({"error": "No question provided"}), 400
+    
+    if not FAISS_AVAILABLE:
+        return jsonify({"error": "FAISS is not available. Please install faiss-cpu."}), 500
+    
+    if faiss_index is None:
+        return jsonify({"error": "FAISS index is not loaded properly."}), 500
     
     retriever = RetrievalQA(llm=llm, retriever=faiss_index)
     response = retriever.run(question)
