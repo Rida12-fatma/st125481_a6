@@ -7,4 +7,3 @@ faiss-cpu
 huggingface_hub
 numpy
 
-
