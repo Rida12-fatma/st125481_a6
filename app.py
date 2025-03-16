@@ -10,13 +10,13 @@ from sentence_transformers import SentenceTransformer
 from langchain.storage import InMemoryStore
 from langchain_core.documents import Document
 from langchain.llms import HuggingFaceHub
-from langchain import PromptTemplate
 
 # Set page title and favicon
 st.set_page_config(page_title="Rida Fatma's Resume Chatbot", page_icon=":robot_face:")
 
 # Set the Hugging Face API Token as an environment variable
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"  # Replace with your actual token
+
 # Load Hugging Face API Token
 hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 if hf_token is None:
@@ -35,11 +35,13 @@ INDEX_PATH = "faiss_index.bin"
 # Check if FAISS index exists and load it if available
 if os.path.exists(INDEX_PATH):
     index = faiss.read_index(INDEX_PATH)
-    print("FAISS index loaded from disk.")
+    st.write("FAISS index loaded from disk.")
 else:
-    print("FAISS index not found. Rebuilding...")
+    st.write("FAISS index not found. Rebuilding...")
+
+    # Load Personal Documents
     pdf_files = [
-        "path_to_your_pdf/RIDA_FATMA_Resume.pdf"  # Change this to your actual PDF path
+        "/content/RIDA FATMA Resume.pdf"
     ]
 
     documents = []
@@ -51,11 +53,14 @@ else:
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     text_chunks = text_splitter.split_documents(documents)
 
-    # Extract text content
+    # Extract text content from chunks
     texts = [doc.page_content for doc in text_chunks]
 
+    # Convert text to embeddings using SentenceTransformer
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
     embeddings = embedding_model.encode(texts, convert_to_tensor=False)
+
+    # Convert embeddings to numpy array for FAISS
     embedding_matrix = np.array(embeddings).astype("float32")
 
     # Initialize FAISS index
@@ -64,7 +69,7 @@ else:
 
     # Save FAISS index to disk
     faiss.write_index(index, INDEX_PATH)
-    print("FAISS index saved to disk.")
+    st.write("FAISS index saved to disk.")
 
 # Create FAISS vector store
 docstore = InMemoryStore()
@@ -95,17 +100,8 @@ vector_store.docstore.search = docstore_get
 # Setup Retriever
 retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 5})
 
-# Define the structured prompt
-prompt_template = """
-You are an intelligent assistant with expertise in providing information about Ponkrit Kaewsawee.
-Your answers should be accurate, concise, and strictly based on the provided documents.
-If the information is not available, kindly respond that you lack sufficient data.
-
-Question: {question}
-Answer:
-"""
-
-qa_chain = RetrievalQA.from_chain_type(
+# Set up LangChain RetrievalQA chain
+qa_chain_hf = RetrievalQA.from_chain_type(
     llm=hf_llm,
     chain_type="stuff",
     retriever=retriever,
@@ -119,7 +115,7 @@ def ask_chatbot(question):
     if not retrieved_docs:
         return "No relevant information found.", []
 
-    response = qa_chain.invoke({"query": question})
+    response = qa_chain_hf.invoke({"query": question})
     return response["result"], response["source_documents"]
 
 # Streamlit UI
