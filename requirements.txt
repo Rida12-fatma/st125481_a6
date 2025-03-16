@@ -1,7 +1,7 @@
 CharacterTextSplitter
 Document
 FAISS
-HuggingFaceHub
+HuggingFace_Hub
 InMemoryStore
 PromptTemplate
 PyPDFLoader
