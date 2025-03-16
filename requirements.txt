@@ -6,8 +6,11 @@ InMemoryStore
 PromptTemplate
 PyPDFLoader
 RetrievalQA
-SentenceTransformer
-faiss
+Sentence-Transformer
+faiss-cpu
 numpy
 os
 streamlit
+langchain
+langchain-community
+pypdf
