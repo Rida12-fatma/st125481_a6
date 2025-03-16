@@ -1,22 +1,20 @@
+# web.py — UI helper module for Streamlit app
+
 import streamlit as st
-from app import ask_chatbot
 
-# Set page title and favicon
-st.set_page_config(page_title="Rida Fatma's Resume Chatbot", page_icon=":robot_face:")
+def show_title():
+    st.title("📄 Document Q&A Chatbot 🤖")
+    st.write("Upload a PDF and ask questions about its contents using AI.")
 
-# Streamlit UI
-st.title("Rida Fatma's Resume Chatbot :robot_face:")
-st.write("Ask me anything about Rida Fatma's resume!")
+def show_footer():
+    st.markdown("---")
+    st.markdown("Made with ❤️ using Streamlit, LangChain, FAISS, Sentence Transformers, and Hugging Face.")
 
-user_question = st.text_input("Enter your question:")
+def show_error(message):
+    st.error(f"⚠️ {message}")
 
-if user_question:
-    with st.spinner("Thinking..."):
-        answer, source_documents = ask_chatbot(user_question)
-        st.write("**Answer:**", answer)
+def show_success(message):
+    st.success(f"✅ {message}")
 
-        # Display source documents (optional)
-        if source_documents:
-            st.write("**Source Documents:**")
-            for doc in source_documents:
-                st.write(doc.page_content)
+def show_spinner(message):
+    return st.spinner(f"⏳ {message}")
