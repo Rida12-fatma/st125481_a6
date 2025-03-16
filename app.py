@@ -43,21 +43,29 @@ else:
     documents = []
     for pdf_file in pdf_files:
         loader = PyPDFLoader(pdf_file)
-        documents.extend(loader.load())
+        docs = loader.load()
+        print(f"Loaded {len(docs)} documents from {pdf_file}")
+        documents.extend(docs)
+
+    if not documents:
+        raise ValueError("No documents were loaded. Ensure the PDF file path is correct.")
 
     # Split documents into chunks
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     text_chunks = text_splitter.split_documents(documents)
-
-    # Debug: Print the number of chunks created
     print(f"Number of text chunks created: {len(text_chunks)}")
+
+    if not text_chunks:
+        raise ValueError("No text chunks were created. Ensure the documents are correctly loaded and split.")
 
     # Extract text content from chunks
     texts = [doc.page_content for doc in text_chunks]
+    print(f"Extracted text from {len(texts)} chunks.")
 
     # Convert text to embeddings using SentenceTransformer
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
     embeddings = embedding_model.encode(texts, convert_to_tensor=False)
+    print(f"Generated embeddings for {len(embeddings)} chunks.")
 
     # Convert embeddings to numpy array for FAISS
     embedding_matrix = np.array(embeddings).astype("float32")
