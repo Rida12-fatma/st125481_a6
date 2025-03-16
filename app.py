@@ -11,10 +11,10 @@ from langchain.storage import InMemoryStore
 from langchain_core.documents import Document
 from langchain.llms import HuggingFaceHub
 
-# Set Hugging Face API Token (securely from secrets if on Streamlit Cloud)
+# Securely load Hugging Face token
 hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN") or st.secrets.get("HUGGINGFACEHUB_API_TOKEN")
 if hf_token is None:
-    st.error("HUGGINGFACEHUB_API_TOKEN is not set. Please set it in your environment or Streamlit secrets.")
+    st.error("HUGGINGFACEHUB_API_TOKEN not set. Set it as an environment variable or in Streamlit secrets.")
     st.stop()
 
 # Initialize Hugging Face LLM
@@ -25,21 +25,18 @@ hf_llm = HuggingFaceHub(
 )
 
 # Streamlit UI
-st.title("Document-Based Q&A Chatbot 🤖📄")
+st.title("📄 Document Q&A Chatbot 🤖")
+st.write("Upload a PDF and ask questions about its content!")
 
-uploaded_file = st.file_uploader("Upload a PDF document", type=["pdf"])
+uploaded_file = st.file_uploader("Upload your PDF", type=["pdf"])
 
 if uploaded_file:
-    with st.spinner("Processing document..."):
-        # Load document using PyPDFLoader
+    with st.spinner("Loading and processing document..."):
+        # Load and split PDF
         loader = PyPDFLoader(uploaded_file)
         documents = loader.load()
-
-        # Split into chunks
         text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
         text_chunks = text_splitter.split_documents(documents)
-
-        # Convert chunks to text
         texts = [doc.page_content for doc in text_chunks]
 
         # Generate embeddings
@@ -78,7 +75,7 @@ if uploaded_file:
             return_source_documents=True
         )
 
-        st.success("Document processed. Ask your questions below!")
+        st.success("Document processed! Ask your question below.")
 
         query = st.text_input("Ask a question about the document:")
 
