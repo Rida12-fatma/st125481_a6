@@ -1,7 +1,7 @@
-from dotenv import load_dotenv
 import os
 import faiss
 import numpy as np
+import streamlit as st
 from langchain.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader
@@ -10,21 +10,23 @@ from sentence_transformers import SentenceTransformer
 from langchain.storage import InMemoryStore
 from langchain_core.documents import Document
 from langchain.llms import HuggingFaceHub
+from langchain import PromptTemplate
 
-# Load environment variables
-load_dotenv()
+# Set page title and favicon
+st.set_page_config(page_title="Rida Fatma's Resume Chatbot", page_icon=":robot_face:")
 
-# Access Hugging Face API Token
+# Set the Hugging Face API Token as an environment variable
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"  # Replace with your actual token
+# Load Hugging Face API Token
 hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 if hf_token is None:
-    raise ValueError("HUGGINGFACEHUB_API_TOKEN is not set. Please check your .env file.")
+    raise ValueError("HUGGINGFACEHUB_API_TOKEN is not set. Please set it in your environment variables.")
 
 # Initialize Hugging Face LLM
-llm = HuggingFaceHub(
+hf_llm = HuggingFaceHub(
     repo_id="google/flan-t5-large",
     huggingfacehub_api_token=hf_token,
-    model_kwargs={"temperature": 0.7, "max_length": 512},
-    task="text2text-generation"  # Specify the task explicitly
+    model_kwargs={"temperature": 0.7, "max_length": 512}
 )
 
 # Define FAISS index file path
@@ -36,38 +38,33 @@ if os.path.exists(INDEX_PATH):
     print("FAISS index loaded from disk.")
 else:
     print("FAISS index not found. Rebuilding...")
+    pdf_files = [
+        "path_to_your_pdf/RIDA_FATMA_Resume.pdf"  # Change this to your actual PDF path
+    ]
 
-# Load Personal Documents
-pdf_files = [
-    "RIDA FATMA Resume.pdf"
-]
+    documents = []
+    for pdf_file in pdf_files:
+        loader = PyPDFLoader(pdf_file)
+        documents.extend(loader.load())
 
-documents = []
-for pdf_file in pdf_files:
-    loader = PyPDFLoader(pdf_file)
-    documents.extend(loader.load())
+    # Split documents into chunks
+    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    text_chunks = text_splitter.split_documents(documents)
 
-# Split documents into chunks
-text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-text_chunks = text_splitter.split_documents(documents)
+    # Extract text content
+    texts = [doc.page_content for doc in text_chunks]
 
-# Extract text content from chunks
-texts = [doc.page_content for doc in text_chunks]
+    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    embeddings = embedding_model.encode(texts, convert_to_tensor=False)
+    embedding_matrix = np.array(embeddings).astype("float32")
 
-# Convert text to embeddings using SentenceTransformer
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-embeddings = embedding_model.encode(texts, convert_to_tensor=False)
+    # Initialize FAISS index
+    index = faiss.IndexFlatL2(embedding_matrix.shape[1])
+    index.add(embedding_matrix)
 
-# Convert embeddings to numpy array for FAISS
-embedding_matrix = np.array(embeddings).astype("float32")
-
-# Initialize FAISS index
-index = faiss.IndexFlatL2(embedding_matrix.shape[1])
-index.add(embedding_matrix)
-
-# Save FAISS index to disk
-faiss.write_index(index, INDEX_PATH)
-print("FAISS index saved to disk.")
+    # Save FAISS index to disk
+    faiss.write_index(index, INDEX_PATH)
+    print("FAISS index saved to disk.")
 
 # Create FAISS vector store
 docstore = InMemoryStore()
@@ -108,9 +105,8 @@ Question: {question}
 Answer:
 """
 
-# Set up LangChain RetrievalQA chain
 qa_chain = RetrievalQA.from_chain_type(
-    llm=llm,
+    llm=hf_llm,
     chain_type="stuff",
     retriever=retriever,
     return_source_documents=True
@@ -125,3 +121,19 @@ def ask_chatbot(question):
 
     response = qa_chain.invoke({"query": question})
     return response["result"], response["source_documents"]
+
+# Streamlit UI
+st.title("Rida Fatma's Resume Chatbot :robot_face:")
+st.write("Ask me anything about Rida Fatma's resume!")
+
+user_question = st.text_input("Enter your question:")
+
+if user_question:
+    with st.spinner("Thinking..."):
+        answer, source_documents = ask_chatbot(user_question)
+        st.write("**Answer:**", answer)
+
+        # Display source documents (optional)
+        # st.write("**Source Documents:**")
+        # for doc in source_documents:
+        #     st.write(doc.page_content)
