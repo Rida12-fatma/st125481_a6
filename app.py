@@ -9,37 +9,29 @@ from sentence_transformers import SentenceTransformer
 from langchain.storage import InMemoryStore
 from langchain_core.documents import Document
 from langchain.llms import HuggingFaceHub
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Set Hugging Face API Token
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"  # Replace with your actual token
-
-# Load Hugging Face API Token
 hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 if hf_token is None:
-    raise ValueError("HUGGINGFACEHUB_API_TOKEN is not set. Please set it in your environment variables.")
+    raise ValueError("HUGGINGFACEHUB_API_TOKEN is not set. Please check your .env file.")
 
 # Initialize Hugging Face LLM
 llm = HuggingFaceHub(
     repo_id="google/flan-t5-large",
     huggingfacehub_api_token=hf_token,
     model_kwargs={"temperature": 0.7, "max_length": 512},
-    task="text2text-generation"  # Specify the task explicitly
+    task="text2text-generation"
 )
 
 # Define FAISS index file path
 INDEX_PATH = "faiss_index.bin"
 
-# Check if FAISS index exists and load it if available
-if os.path.exists(INDEX_PATH):
-    index = faiss.read_index(INDEX_PATH)
-    print("FAISS index loaded from disk.")
-else:
-    print("FAISS index not found. Rebuilding...")
-
 # Load Personal Documents
-pdf_files = [
-    "RIDA FATMA Resume.pdf"
-]
+pdf_files = ["RIDA_FATMA_Resume.pdf"]
 
 documents = []
 for pdf_file in pdf_files:
@@ -60,18 +52,21 @@ embeddings = embedding_model.encode(texts, convert_to_tensor=False)
 # Convert embeddings to numpy array for FAISS
 embedding_matrix = np.array(embeddings).astype("float32")
 
-# Initialize FAISS index
-index = faiss.IndexFlatL2(embedding_matrix.shape[1])
-index.add(embedding_matrix)
-
-# Save FAISS index to disk
-faiss.write_index(index, INDEX_PATH)
-print("FAISS index saved to disk.")
+# Check if FAISS index exists and load it if available
+if os.path.exists(INDEX_PATH):
+    index = faiss.read_index(INDEX_PATH)
+    print("FAISS index loaded from disk.")
+else:
+    index = faiss.IndexFlatL2(embedding_matrix.shape[1])
+    index.add(embedding_matrix)
+    faiss.write_index(index, INDEX_PATH)
+    print("FAISS index saved to disk.")
 
 # Create FAISS vector store
 docstore = InMemoryStore()
 index_to_docstore_id = {}
 
+# Store document chunks in docstore
 document_objects = []
 for i, doc in enumerate(text_chunks):
     doc_object = Document(page_content=doc.page_content, metadata=doc.metadata)
@@ -99,7 +94,7 @@ retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"
 
 # Define the structured prompt
 prompt_template = """
-You are an intelligent assistant with expertise in providing information about Ponkrit Kaewsawee.
+You are an intelligent assistant with expertise in providing information about Rida Fatma.
 Your answers should be accurate, concise, and strictly based on the provided documents.
 If the information is not available, kindly respond that you lack sufficient data.
 
