@@ -41,7 +41,7 @@ else:
 
     # Load Personal Documents
     pdf_files = [
-        "/content/RIDA FATMA Resume.pdf"
+        "/content/RIDA FATMA Resume.pdf"  # Ensure this path is correct
     ]
 
     documents = []
@@ -76,7 +76,7 @@ docstore = InMemoryStore()
 index_to_docstore_id = {}
 
 document_objects = []
-for i, doc in enumerate(text_chunks):
+for i, doc in enumerate(text_chunks):  # Ensure text_chunks is defined before this loop
     doc_object = Document(page_content=doc.page_content, metadata=doc.metadata)
     document_objects.append(doc_object)
     index_to_docstore_id[i] = str(i)
