@@ -1,61 +1,54 @@
-Document-Based Question Answering using LangChain and FAISS
-This project implements a document-based question-answering system that allows users to query PDF documents intelligently using natural language. It leverages LangChain, FAISS, Hugging Face Transformers, and Sentence Transformers to perform document parsing, embedding, indexing, and question-answering.
+📄 NLP-Based PDF Question Answering System
+This project implements a Natural Language Processing (NLP) pipeline for querying PDF documents using a Retrieval-Based Question Answering (QA) approach. It utilizes Hugging Face Transformers, FAISS for vector similarity search, and SentenceTransformers for text embeddings.
 
-Features
-PDF Document Loading and Parsing using PyPDFLoader
-Text Chunking for efficient embedding and retrieval
-Embedding generation with all-MiniLM-L6-v2 (Sentence Transformers)
-Vector Store using FAISS for efficient similarity search
-LLM-powered response generation using Hugging Face's FLAN-T5-Large
-Persistent FAISS index for fast reload and inference
-Installation
-Install the required dependencies:
-
+🚀 Features
+Load and parse PDF documents
+Generate embeddings using all-MiniLM-L6-v2
+Build a FAISS vector store for efficient retrieval
+Integrate Hugging Face Language Model for generating answers
+Ask questions from loaded PDFs interactively
+🛠️ Technologies Used
+Python
+pypdf for PDF parsing
+sentence-transformers
+faiss for vector indexing
+transformers and HuggingFaceHub for LLMs
+RetrievalQA from LangChain (assumed)
+📂 Project Structure
+File	Description
+st125481_a6__NLP.ipynb	Main notebook containing all code and logic
+README.md	Project overview and usage instructions
+📋 Installation
 bash
 Copy
 Edit
-pip install pypdf
-pip install -U langchain-community
-pip install faiss-cpu
-pip install sentence_transformers
-Setup
-Hugging Face API Token
-Set your Hugging Face API token as an environment variable:
+pip install pypdf sentence-transformers faiss-cpu transformers langchain
+📈 Usage
+Add PDF files: Place your PDF files in the designated directory.
+Run the notebook: Execute cells to process PDFs, create embeddings, and query using the LLM.
+Ask Questions: Use the chatbot interface to ask questions related to the PDF content.
+🔐 Hugging Face Token
+Make sure to load your Hugging Face API token securely for LLM access.
 
-bash
-Copy
-Edit
-export HUGGINGFACEHUB_API_TOKEN=your_token_here
-Input PDF Files
-Add your PDF files to the specified location and update the file path in the notebook:
-
+📄 Example
 python
 Copy
 Edit
-pdf_files = ["/path/to/your/document.pdf"]
-Usage
-Run the Notebook
-The notebook will:
+answer = ask_question("What is the summary of the first section?")
+print(answer)
 
-Load and split PDF text into chunks
-Generate embeddings and build a FAISS index
-Store/reload the FAISS index for reuse
-Accept user queries and return answers using the LLM
-Example Query
-After the setup, you can ask questions related to the contents of your PDF:
 
-python
-Copy
-Edit
-query = "What are the skills mentioned in the resume?"
-Model Info
-LLM Used: google/flan-t5-large from Hugging Face
-Embedding Model: all-MiniLM-L6-v2 from Sentence Transformers
-Vector Store: FAISS
-Notes
-Ensure that large PDFs are split efficiently to avoid memory issues.
-The FAISS index is saved as faiss_index.bin for persistence.
-Avoid committing your Hugging Face API token in public repositories.
-License
-This project is for educational purposes. Please check licenses for Hugging Face models and LangChain before commercial use.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
