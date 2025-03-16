@@ -1,12 +1,10 @@
-flask
-numpy
-langchain
-sentence-transformers
-langchain-community
-langchain-core
-PyPDF2
-huggingface_hub
 streamlit
-requests
+langchain
+langchain-community
+pypdf
+sentence-transformers
+faiss-cpu
+huggingface_hub
+numpy
 
 
