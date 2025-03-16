@@ -71,13 +71,17 @@ else:
 docstore = InMemoryStore()
 index_to_docstore_id = {}
 
-document_objects = []
-for i, doc in enumerate(text_chunks):
-    doc_object = Document(page_content=doc.page_content, metadata=doc.metadata)
-    document_objects.append(doc_object)
-    index_to_docstore_id[i] = str(i)
+# Ensure text_chunks is defined before this loop
+if 'text_chunks' in locals():
+    document_objects = []
+    for i, doc in enumerate(text_chunks):
+        doc_object = Document(page_content=doc.page_content, metadata=doc.metadata)
+        document_objects.append(doc_object)
+        index_to_docstore_id[i] = str(i)
 
-docstore.mset([(str(i), doc) for i, doc in enumerate(document_objects)])
+    docstore.mset([(str(i), doc) for i, doc in enumerate(document_objects)])
+else:
+    raise ValueError("text_chunks is not defined. Ensure documents are loaded and split into chunks.")
 
 vector_store = FAISS(
     embedding_function=embedding_model.encode,
