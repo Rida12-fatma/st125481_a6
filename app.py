@@ -5,15 +5,19 @@ import numpy as np
 from langchain.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader
-from langchain.chains import RetrievalQA
+from langchain.chains import RetrievalQAWithSourcesChain
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.llms import HuggingFaceHub
 
-# Streamlit App Title
-st.title("PDF Chatbot with LangChain & FAISS")
+st.set_page_config(page_title="PDF Chatbot", page_icon="🤖")
+st.title("🤖 Chat with your PDF")
 
 # File uploader for PDFs
 uploaded_file = st.sidebar.file_uploader("Upload a PDF", type=["pdf"])
+
+# Initialize session state for chat history
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 if uploaded_file is not None:
     with open("temp.pdf", "wb") as f:
@@ -38,20 +42,33 @@ if uploaded_file is not None:
     # Initialize LLM from Hugging Face Hub (replace with your own API key in .env or here)
     llm = HuggingFaceHub(repo_id="google/flan-t5-base", model_kwargs={"temperature": 0.5, "max_length": 512})
 
-    # Create Retrieval QA chain
-    qa_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=vectorstore.as_retriever())
+    # Create Retrieval QA chain with sources
+    qa_chain = RetrievalQAWithSourcesChain.from_chain_type(llm=llm, chain_type="stuff", retriever=vectorstore.as_retriever())
 
-    # User input for questions
-    query = st.text_input("Ask something about the PDF:")
+    # Display chat messages
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    if query:
-        with st.spinner("Generating answer..."):
-            result = qa_chain.run(query)
-        st.write("### Answer:")
-        st.write(result)
+    # Chat input
+    user_input = st.chat_input("Ask anything about your PDF...")
 
-    # Clean up
+    if user_input:
+        st.session_state.chat_history.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.markdown(user_input)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                result = qa_chain({"question": user_input})
+                answer = result["answer"]
+                sources = result.get("sources", "No sources found.")
+                response = f"**Answer:** {answer}\n\n**Sources:** {sources}"
+                st.markdown(response)
+
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
+
+    # Clean up after processing
     os.remove("temp.pdf")
-
 else:
-    st.info("Please upload a PDF to begin.")
+    st.info("Upload a PDF to start chatting.")
