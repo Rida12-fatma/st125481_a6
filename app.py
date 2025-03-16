@@ -49,6 +49,9 @@ else:
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     text_chunks = text_splitter.split_documents(documents)
 
+    # Debug: Print the number of chunks created
+    print(f"Number of text chunks created: {len(text_chunks)}")
+
     # Extract text content from chunks
     texts = [doc.page_content for doc in text_chunks]
 
@@ -117,3 +120,6 @@ def ask_chatbot(question):
 
     response = qa_chain.invoke({"query": question})
     return response["result"], response["source_documents"]
+
+# Debug: Print a message indicating that the script has finished executing
+print("Script execution completed.")
