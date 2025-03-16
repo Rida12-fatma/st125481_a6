@@ -1,133 +1,67 @@
 import os
 import faiss
 import numpy as np
+import streamlit as st
 from langchain.vectorstores import FAISS
-from langchain.text_splitter import CharacterTextSplitter
 from langchain.document_loaders import PyPDFLoader
 from langchain.chains import RetrievalQA
 from sentence_transformers import SentenceTransformer
-from langchain.storage import InMemoryStore
-from langchain_core.documents import Document
 from langchain.llms import HuggingFaceHub
-
-# Set the Hugging Face API Token as an environment variable
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"  # Replace with your actual token
+from langchain.text_splitter import CharacterTextSplitter
 
 # Load Hugging Face API Token
 hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 if hf_token is None:
-    raise ValueError("HUGGINGFACEHUB_API_TOKEN is not set. Please set it in your environment variables.")
+    st.error("HUGGINGFACEHUB_API_TOKEN is not set. Please set it in your environment variables.")
+    st.stop()
 
 # Initialize Hugging Face LLM
-hf_llm = HuggingFaceHub(
-    repo_id="google/flan-t5-large",
-    huggingfacehub_api_token=hf_token,
-    model_kwargs={"temperature": 0.7, "max_length": 512}
-)
+llm = HuggingFaceHub(repo_id="google/flan-t5-large", huggingfacehub_api_token=hf_token)
 
-# Define FAISS index file path
-INDEX_PATH = "faiss_index.bin"
+# Load and process documents
+def load_documents(pdf_path):
+    loader = PyPDFLoader(pdf_path)
+    documents = loader.load()
+    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    split_docs = text_splitter.split_documents(documents)
+    return split_docs
 
-# Check if FAISS index exists and load it if available
-if os.path.exists(INDEX_PATH):
-    index = faiss.read_index(INDEX_PATH)
-    print("FAISS index loaded from disk.")
-else:
-    print("FAISS index not found. Rebuilding...")
+# Create FAISS index
+def create_faiss_index(documents, embedder):
+    embeddings = np.array([embedder.encode(doc.page_content) for doc in documents], dtype=np.float32)
+    index = faiss.IndexFlatL2(embeddings.shape[1])
+    index.add(embeddings)
+    return index
 
-    # Load Personal Documents
-    pdf_files = [
-        "/content/RIDA FATMA Resume.pdf"
-    ]
+st.title("RAG Chatbot")
 
-    documents = []
-    for pdf_file in pdf_files:
-        loader = PyPDFLoader(pdf_file)
-        docs = loader.load()
-        print(f"Loaded {len(docs)} documents from {pdf_file}")
-        documents.extend(docs)
+# Initialize embedding model
+embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
-    if not documents:
-        raise ValueError("No documents were loaded. Ensure the PDF file path is correct.")
+# File Upload
+uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
+if uploaded_file is not None:
+    with open("temp.pdf", "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    documents = load_documents("temp.pdf")
+    index = create_faiss_index(documents, embedder)
+    st.session_state["index"] = index
+    st.session_state["documents"] = documents
+    st.success("Document processed and indexed!")
 
-    # Split documents into chunks
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-    text_chunks = text_splitter.split_documents(documents)
-    print(f"Number of text chunks created: {len(text_chunks)}")
-
-    if not text_chunks:
-        raise ValueError("No text chunks were created. Ensure the documents are correctly loaded and split.")
-
-    # Extract text content from chunks
-    texts = [doc.page_content for doc in text_chunks]
-    print(f"Extracted text from {len(texts)} chunks.")
-
-    # Convert text to embeddings using SentenceTransformer
-    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-    embeddings = embedding_model.encode(texts, convert_to_tensor=False)
-    print(f"Generated embeddings for {len(embeddings)} chunks.")
-
-    # Convert embeddings to numpy array for FAISS
-    embedding_matrix = np.array(embeddings).astype("float32")
-
-    # Initialize FAISS index
-    index = faiss.IndexFlatL2(embedding_matrix.shape[1])
-    index.add(embedding_matrix)
-
-    # Save FAISS index to disk
-    faiss.write_index(index, INDEX_PATH)
-    print("FAISS index saved to disk.")
-
-# Create FAISS vector store
-docstore = InMemoryStore()
-index_to_docstore_id = {}
-
-# Ensure text_chunks is defined before this loop
-if 'text_chunks' in locals():
-    document_objects = []
-    for i, doc in enumerate(text_chunks):
-        doc_object = Document(page_content=doc.page_content, metadata=doc.metadata)
-        document_objects.append(doc_object)
-        index_to_docstore_id[i] = str(i)
-
-    docstore.mset([(str(i), doc) for i, doc in enumerate(document_objects)])
-else:
-    raise ValueError("text_chunks is not defined. Ensure documents are loaded and split into chunks.")
-
-vector_store = FAISS(
-    embedding_function=embedding_model.encode,
-    index=index,
-    docstore=docstore,
-    index_to_docstore_id=index_to_docstore_id
-)
-
-# Override `docstore.search` with `mget()`
-def docstore_get(doc_id):
-    docs = docstore.mget([doc_id])
-    return docs[0] if docs else None
-
-vector_store.docstore.search = docstore_get
-
-# Setup Retriever
-retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 5})
-
-# Set up LangChain RetrievalQA chain
-qa_chain = RetrievalQA.from_chain_type(
-    llm=hf_llm,
-    chain_type="stuff",
-    retriever=retriever,
-    return_source_documents=True
-)
-
-# Function to ask chatbot questions
-def ask_chatbot(question):
-    retrieved_docs = retriever.get_relevant_documents(question)
-
-    if not retrieved_docs:
-        return "No relevant information found.", []
-
-    response = qa_chain.invoke({"query": question})
-    return response["result"], response["source_documents"]
-
-# Debug: Print a message indicating that the script has finished executing
-print("Script execution completed.")
+# Query chatbot
+query = st.text_input("Ask a question about the document:")
+if query and "index" in st.session_state:
+    query_embedding = np.array([embedder.encode(query)], dtype=np.float32)
+    D, I = st.session_state["index"].search(query_embedding, k=5)
+    retrieved_docs = [st.session_state["documents"][i] for i in I[0] if i < len(st.session_state["documents"])]
+    
+    if retrieved_docs:
+        retriever = FAISS.load_local("", embedder)
+        retriever.index = st.session_state["index"]
+        retriever.docstore.add_documents(st.session_state["documents"])
+        qa_chain = RetrievalQA(llm=llm, retriever=retriever)
+        response = qa_chain.run(query)
+        st.write("### Answer:", response)
+    else:
+        st.write("### Answer: No relevant documents found.")
