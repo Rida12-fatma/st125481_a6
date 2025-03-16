@@ -41,13 +41,17 @@ else:
 
     # Load Personal Documents
     pdf_files = [
-        "/content/RIDA FATMA Resume.pdf"  # Ensure this path is correct
+        "./RIDA FATMA Resume.pdf"  # Use a relative path or allow file upload
     ]
 
     documents = []
     for pdf_file in pdf_files:
-        loader = PyPDFLoader(pdf_file)
-        documents.extend(loader.load())
+        try:
+            loader = PyPDFLoader(pdf_file)
+            documents.extend(loader.load())
+        except Exception as e:
+            st.error(f"Error loading PDF file: {e}")
+            st.stop()
 
     # Split documents into chunks
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
@@ -76,7 +80,7 @@ docstore = InMemoryStore()
 index_to_docstore_id = {}
 
 document_objects = []
-for i, doc in enumerate(text_chunks):  # Ensure text_chunks is defined before this loop
+for i, doc in enumerate(text_chunks):  # Ensure text_chunks is defined
     doc_object = Document(page_content=doc.page_content, metadata=doc.metadata)
     document_objects.append(doc_object)
     index_to_docstore_id[i] = str(i)
