@@ -39,8 +39,15 @@ if uploaded_file is not None:
     # Create FAISS index
     vectorstore = FAISS.from_documents(docs, embeddings)
 
-    # Initialize LLM from Hugging Face Hub (replace with your own API key in .env or here)
-    llm = HuggingFaceHub(repo_id="google/flan-t5-base", model_kwargs={"temperature": 0.5, "max_length": 512})
+    # Hardcoded Hugging Face API token (for quick testing ONLY)
+    huggingfacehub_api_token = "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"
+
+    # Initialize LLM from Hugging Face Hub with token
+    llm = HuggingFaceHub(
+        repo_id="google/flan-t5-base",
+        huggingfacehub_api_token=huggingfacehub_api_token,
+        model_kwargs={"temperature": 0.5, "max_length": 512}
+    )
 
     # Create Retrieval QA chain with sources
     qa_chain = RetrievalQAWithSourcesChain.from_chain_type(llm=llm, chain_type="stuff", retriever=vectorstore.as_retriever())
