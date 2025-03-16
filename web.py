@@ -1,18 +1,22 @@
 import streamlit as st
-import numpy as np
-from sentence_transformers import SentenceTransformer
+from app import ask_chatbot
 
-# Load the model
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# Set page title and favicon
+st.set_page_config(page_title="Rida Fatma's Resume Chatbot", page_icon=":robot_face:")
 
-st.title("NLP Model Interface")
+# Streamlit UI
+st.title("Rida Fatma's Resume Chatbot :robot_face:")
+st.write("Ask me anything about Rida Fatma's resume!")
 
-# User input
-user_input = st.text_area("Enter text:")
+user_question = st.text_input("Enter your question:")
 
-if st.button("Generate Embedding"):
-    if user_input:
-        embedding = model.encode(user_input)
-        st.write("Embedding:", embedding)
-    else:
-        st.warning("Please enter text before generating embeddings.")
+if user_question:
+    with st.spinner("Thinking..."):
+        answer, source_documents = ask_chatbot(user_question)
+        st.write("**Answer:**", answer)
+
+        # Display source documents (optional)
+        if source_documents:
+            st.write("**Source Documents:**")
+            for doc in source_documents:
+                st.write(doc.page_content)
