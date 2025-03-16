@@ -1,11 +1,6 @@
-CharacterTextSplitter
-Document
+
 FAISS
 HuggingFace_Hub
-InMemoryStore
-PromptTemplate
-PyPDFLoader
-RetrievalQA
 Sentence-Transformer
 faiss-cpu
 numpy
